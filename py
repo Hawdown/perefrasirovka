@@ -7,6 +7,9 @@ from aiogram.filters import CommandStart
 TELEGRAM_TOKEN = "9015412459:AAEwbaxRq3z0ugmVj8WINnn5YHUctRnC9DA"
 PROXYAPI_KEY = "sk-8wzLxinkog6osQ0AT5bDbyqdkuAg4yXT"
 
+API_URL = "https://proxyapi.ru"
+MODEL_NAME = "openai/gpt-4.1-mini"
+
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -27,45 +30,33 @@ SYSTEM_PROMPT = """
 """
 
 async def humanize_text(text: str) -> str:
-    domain = "api." + "proxyapi.ru"
-    configs = [
-        (f"https://{domain}/openrouter/v1/chat/completions", "openai/gpt-4.1-mini"),
-        (f"https://{domain}/openai/v1/chat/completions", "gpt-4.1-mini"),
-        (f"https://{domain}/openai/v1/chat/completions", "gpt-4o-mini"),
-    ]
-    
     headers = {
         "Authorization": f"Bearer {PROXYAPI_KEY}",
         "Content-Type": "application/json"
     }
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Перепиши этот текст:\n\n{text}"}
+        ],
+        "temperature": 0.85
+    }
     
-    last_error = None
-    
-    async with aiohttp.ClientSession() as session:
-        for url, model_name in configs:
-            payload = {
-                "model": model_name,
-                "messages": [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": f"Перепиши этот текст:\n\n{text}"}
-                ],
-                "temperature": 0.85
-            }
-            try:
-                async with session.post(url, headers=headers, json=payload) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        first_choice = data["choices"].pop(0)
-                        return first_choice["message"]["content"].strip()
-                    else:
-                        err_text = await resp.text()
-                        last_error = f"Код {resp.status} ({model_name}): {err_text[:150]}"
-                        logging.warning(f"Не сработало {url}: {last_error}")
-            except Exception as e:
-                last_error = str(e)
-                logging.warning(f"Ошибка соединения с {url}: {e}")
-                
-    return f"Все варианты перебраны, ошибка: {last_error}"
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_URL, headers=headers, json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    first_choice = data["choices"].pop(0)
+                    return first_choice["message"]["content"].strip()
+                else:
+                    err_text = await resp.text()
+                    logging.error(f"Ошибка API ({resp.status}): {err_text}")
+                    return f"Ошибка ProxyAPI ({resp.status}): {err_text[:150]}"
+    except Exception as e:
+        logging.error(f"Ошибка соединения: {e}")
+        return f"Ошибка соединения: {e}"
 
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
