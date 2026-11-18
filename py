@@ -7,7 +7,7 @@ from aiogram.filters import CommandStart
 TELEGRAM_TOKEN = "9015412459:AAEwbaxRq3z0ugmVj8WINnn5YHUctRnC9DA"
 PROXYAPI_KEY = "sk-8wzLxinkog6osQ0AT5bDbyqdkuAg4yXT"
 
-API_URL = "https://api.proxyapi.ru/v1/chat/completions"
+API_URL = "https://proxyapi.ru"
 MODEL_NAME = "openai/gpt-4o-mini"
 
 logging.basicConfig(level=logging.INFO)
