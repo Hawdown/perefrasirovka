@@ -4,9 +4,8 @@ import aiohttp
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
 
-# --- НАСТРОЙКИ ---
 TELEGRAM_TOKEN = "9015412459:AAEwbaxRq3z0ugmVj8WINnn5YHUctRnC9DA"
-PROXYAPI_KEY = "sk-Puf1u6JeY80t1KGui9kCXew7V35OVqkM"
+PROXYAPI_KEY = "sk-8wzLxinkog6osQ0AT5bDbyqdkuAg4yXT"
 
 API_URL = "https://proxyapi.ru"
 MODEL_NAME = "gpt-4o-mini"
@@ -49,7 +48,8 @@ async def humanize_text(text: str) -> str:
             async with session.post(API_URL, headers=headers, json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return data["choices"][0]["message"]["content"].strip()
+                    first_choice = data["choices"].pop(0)
+                    return first_choice["message"]["content"].strip()
                 else:
                     err_text = await resp.text()
                     logging.error(f"Ошибка API ({resp.status}): {err_text}")
