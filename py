@@ -7,8 +7,8 @@ from aiogram.filters import CommandStart
 TELEGRAM_TOKEN = "9015412459:AAEwbaxRq3z0ugmVj8WINnn5YHUctRnC9DA"
 PROXYAPI_KEY = "sk-8wzLxinkog6osQ0AT5bDbyqdkuAg4yXT"
 
-API_URL = "https://proxyapi.ru"
-MODEL_NAME = "gpt-4o-mini"
+API_URL = "https://api.proxyapi.ru/v1/chat/completions"
+MODEL_NAME = "openai/gpt-4o-mini"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -53,7 +53,7 @@ async def humanize_text(text: str) -> str:
                 else:
                     err_text = await resp.text()
                     logging.error(f"Ошибка API ({resp.status}): {err_text}")
-                    return f"Ошибка ProxyAPI (код {resp.status}). Проверь баланс или ключ."
+                    return f"Ошибка ProxyAPI (код {resp.status}). Детали в логах."
     except Exception as e:
         logging.error(f"Ошибка соединения: {e}")
         return "Произошла ошибка при обработке текста."
