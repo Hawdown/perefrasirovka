@@ -1,20 +1,20 @@
 import asyncio
 import logging
+import aiohttp
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
-from openai import AsyncOpenAI
 
+# --- НАСТРОЙКИ ---
 TELEGRAM_TOKEN = "9015412459:AAEwbaxRq3z0ugmVj8WINnn5YHUctRnC9DA"
 PROXYAPI_KEY = "sk-Puf1u6JeY80t1KGui9kCXew7V35OVqkM"
 
-BASE_URL = "https://proxyapi.ru"
+API_URL = "https://proxyapi.ru"
 MODEL_NAME = "gpt-4o-mini"
 
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TELEGRAM_TOKEN)
 dp = Dispatcher()
-ai_client = AsyncOpenAI(api_key=PROXYAPI_KEY, base_url=BASE_URL)
 
 SYSTEM_PROMPT = """
 Твоя задача — глубоко переработать и перефразировать предоставленный текст так, 
@@ -31,19 +31,32 @@ SYSTEM_PROMPT = """
 """
 
 async def humanize_text(text: str) -> str:
+    headers = {
+        "Authorization": f"Bearer {PROXYAPI_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Перепиши этот текст:\n\n{text}"}
+        ],
+        "temperature": 0.85
+    }
+    
     try:
-        response = await ai_client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": f"Перепиши этот текст:\n\n{text}"}
-            ],
-            temperature=0.85,
-        )
-        return response.choices[0].message.content.strip()
+        async with aiohttp.ClientSession() as session:
+            async with session.post(API_URL, headers=headers, json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data["choices"][0]["message"]["content"].strip()
+                else:
+                    err_text = await resp.text()
+                    logging.error(f"Ошибка API ({resp.status}): {err_text}")
+                    return f"Ошибка ProxyAPI (код {resp.status}). Проверь баланс или ключ."
     except Exception as e:
-        logging.error(f"Ошибка при обращении к API: {e}")
-        return "Произошла ошибка при обработке текста. Проверьте баланс ProxyAPI или ключ."
+        logging.error(f"Ошибка соединения: {e}")
+        return "Произошла ошибка при обработке текста."
 
 @dp.message(CommandStart())
 async def cmd_start(message: types.Message):
